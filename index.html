@@ -202,11 +202,13 @@ body.light .card:hover { border-color: #b9b7ac; }
 .card:active, .card.selected { border-color: var(--accent); background: linear-gradient(180deg, #33333a 0%, #28282e 100%); box-shadow: 0 0 0 1px var(--accent) inset, 0 0 26px rgba(255,255,255,.07); }
 body.light .card.selected { background: linear-gradient(180deg, #fbfbf8 0%, #f3f2ec 100%); box-shadow: 0 0 0 1px var(--accent) inset, 0 0 26px rgba(0,0,0,.05); }
 .card svg { width: 46px; height: 46px; margin-bottom: .5rem; }
-.card .c-name { font-family: 'IBM Plex Mono', monospace; font-size: .62rem; letter-spacing: .25em; text-transform: uppercase; font-weight: 700; }
-.card .c-desc { font-size: 1rem; color: #c8c8cc; line-height: 1.15; margin-top: .25rem; }
+.card .c-name { font-family: 'IBM Plex Mono', monospace; font-size: .62rem; letter-spacing: .25em; text-transform: uppercase; font-weight: 700; color: #ffffff; }
+body.light .card .c-name { color: var(--text); }
+.card .c-desc { font-size: 1rem; color: #f0f0f2; line-height: 1.15; margin-top: .25rem; }
 body.light .card .c-desc { color: #56554d; }
 .card.small { width: 100px; padding: .8rem .5rem; }
-.card.small .c-roman { font-style: italic; font-size: 1.6rem; font-weight: 500; line-height: 1; }
+.card.small .c-roman { font-style: italic; font-size: 1.6rem; font-weight: 500; line-height: 1; color: #ffffff; }
+body.light .card.small .c-roman { color: var(--text); }
 
 /* ---------- Pantalla de juego ---------- */
 #screen-game { padding: 0; display: none; flex-direction: column; justify-content: flex-start; text-align: center; }
