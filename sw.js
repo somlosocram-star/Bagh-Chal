@@ -1,5 +1,5 @@
 /* Bagh Chal — service worker (cache-first, sin backend) */
-const CACHE = 'baghchal-v2';
+const CACHE = 'baghchal-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -12,7 +12,8 @@ const ASSETS = [
   './icon-maskable-512.png',
   './music-menu.mp3',
   './music-1.mp3',
-  './music-2.mp3'
+  './music-2.mp3',
+  './music-3.mp3'
 ];
 
 self.addEventListener('install', (e) => {

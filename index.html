@@ -260,6 +260,7 @@ body.light .card.small .c-roman { color: var(--text); }
 <audio id="music-menu" src="music-menu.mp3" loop preload="auto"></audio>
 <audio id="music-1" src="music-1.mp3" loop preload="auto"></audio>
 <audio id="music-2" src="music-2.mp3" loop preload="auto"></audio>
+<audio id="music-3" src="music-3.mp3" loop preload="auto"></audio>
 
 <!-- Definiciones SVG de las fichas -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -878,10 +879,10 @@ function startMenuMusic(){
 function stopMenuMusic(){ if (!menuEl) menuEl=$('music-menu'); if (menuEl && !menuEl.paused) fade(menuEl,0,500); }
 function startGameMusic(){
   if (muted) return;
-  if (!gameEls.length) gameEls=[$('music-1'),$('music-2')];
-  const idx = (Math.random()<0.5)?0:1; curTrack=idx;
-  const el=gameEls[idx], other=gameEls[1-idx];
-  if (other) fade(other,0,300);
+  if (!gameEls.length) gameEls=[$('music-1'),$('music-2'),$('music-3')];
+  const idx = Math.floor(Math.random()*gameEls.length); curTrack=idx;
+  const el=gameEls[idx];
+  gameEls.forEach((g,i)=>{ if(g && i!==idx) fade(g,0,300); });
   if (el){ el.currentTime=0; el.volume=0; el.play().then(()=>fade(el,0.45,900)).catch(()=>{}); }
 }
 function stopGameMusic(){ gameEls.forEach(el=>{ if(el) fade(el,0,500); }); curTrack=-1; }
