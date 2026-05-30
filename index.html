@@ -276,9 +276,9 @@ body.light .room-code { box-shadow: inset 0 0 22px rgba(0,0,0,.05); }
 
 <!-- Música -->
 <audio id="music-menu" src="music-menu.mp3" loop preload="auto"></audio>
-<audio id="music-1" src="music-1.mp3" loop preload="auto"></audio>
-<audio id="music-2" src="music-2.mp3" loop preload="auto"></audio>
-<audio id="music-3" src="music-3.mp3" loop preload="auto"></audio>
+<audio id="music-1" src="music-1.mp3" preload="auto"></audio>
+<audio id="music-2" src="music-2.mp3" preload="auto"></audio>
+<audio id="music-3" src="music-3.mp3" preload="auto"></audio>
 <audio id="sfx-capture" src="sfx-capture.mp3" preload="auto"></audio>
 
 <!-- Definiciones SVG de las fichas -->
@@ -1125,6 +1125,8 @@ function applyRemote(d, initial){
   if (!initial && lastMove) sfx(lastMove.type);   // eco sonoro del movimiento del rival
   if (goatsCaptured>=5){ endGame(TIGER); return; }
   if (rawMoves(turn).length===0){ endGame(turn===TIGER ? GOAT : TIGER); return; }
+  // partida en curso (p. ej. tras una revancha): asegura que suena la música
+  if (!initial && !gameMusicOn) startGameMusic();
 }
 
 // muestra/oculta botones de pie según el modo
@@ -1223,7 +1225,7 @@ function sfx(kind){
 }
 
 // Música de fondo (elementos <audio>); el silencio se gestiona aquí.
-let menuEl=null, gameEls=[], curTrack=-1;
+let menuEl=null, gameEls=[], curTrack=-1, lastTrack=-1, gameMusicOn=false;
 function fade(el, target, ms){
   if (!el) return;
   const steps=20, st=ms/steps, start=el.volume; let i=0;
@@ -1237,19 +1239,40 @@ function startMenuMusic(){
   menuEl.volume = 0; menuEl.play().then(()=>fade(menuEl,0.5,1000)).catch(()=>{});
 }
 function stopMenuMusic(){ if (!menuEl) menuEl=$('music-menu'); if (menuEl && !menuEl.paused) fade(menuEl,0,500); }
-function startGameMusic(){
-  if (muted) return;
-  if (!gameEls.length) gameEls=[$('music-1'),$('music-2'),$('music-3')];
-  const idx = Math.floor(Math.random()*gameEls.length); curTrack=idx;
-  const el=gameEls[idx];
-  gameEls.forEach((g,i)=>{ if(g && i!==idx) fade(g,0,300); });
+
+function initGameEls(){
+  if (gameEls.length) return;
+  gameEls=[$('music-1'),$('music-2'),$('music-3')];
+  // al terminar una pista, encadena otra distinta al azar
+  gameEls.forEach(el=>{ if(el) el.addEventListener('ended', ()=>{
+    if (muted || !gameMusicOn) return;
+    playGameTrack(pickGameTrack(curTrack));
+  }); });
+}
+function pickGameTrack(exclude){
+  const n = gameEls.length;
+  if (n<=1) return 0;
+  let idx; do { idx = Math.floor(Math.random()*n); } while (idx===exclude);
+  return idx;
+}
+function playGameTrack(idx){
+  curTrack = idx; lastTrack = idx;
+  const el = gameEls[idx];
+  gameEls.forEach((g,i)=>{ if(g && i!==idx){ try{g.pause();}catch(e){} g.volume=0; } });
   if (el){ el.currentTime=0; el.volume=0; el.play().then(()=>fade(el,0.45,900)).catch(()=>{}); }
 }
-function stopGameMusic(){ gameEls.forEach(el=>{ if(el) fade(el,0,500); }); curTrack=-1; }
+function startGameMusic(){
+  if (muted) return;
+  initGameEls();
+  gameMusicOn = true;
+  playGameTrack(pickGameTrack(lastTrack));   // primera al azar, distinta a la anterior partida
+}
+function isGameMusicPlaying(){ return gameMusicOn && curTrack>=0 && gameEls[curTrack] && !gameEls[curTrack].paused; }
+function stopGameMusic(){ gameMusicOn=false; gameEls.forEach(el=>{ if(el) fade(el,0,500); }); curTrack=-1; }
 function setMuted(m){
   muted=m; try{ localStorage.setItem('baghchal_muted', m?'1':'0'); }catch(e){}
   if (mGain && actx) mGain.gain.setTargetAtTime(m?0:0.5, actx.currentTime, 0.05);
-  if (m){ [menuEl,...gameEls].forEach(el=>{ if(el){ el.volume=0; try{el.pause();}catch(e){} } }); }
+  if (m){ [menuEl,...gameEls].forEach(el=>{ if(el){ el.volume=0; try{el.pause();}catch(e){} } }); gameMusicOn=false; }
   else { if (document.body.classList.contains('in-game')) startGameMusic(); else startMenuMusic(); }
 }
 (function initSound(){

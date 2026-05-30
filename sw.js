@@ -1,5 +1,5 @@
 /* Bagh Chal — service worker */
-const CACHE = 'baghchal-v5';
+const CACHE = "baghchal-v6";
 const ASSETS = [
   './',
   './index.html',
