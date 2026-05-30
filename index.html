@@ -233,7 +233,10 @@ body.light .card.small .c-roman { color: var(--text); }
 @keyframes dots { 0%{content:'';} 25%{content:'.';} 50%{content:'..';} 75%{content:'...';} }
 
 /* ===== Online ===== */
-.online-intro { max-width: 300px; text-align: center; color: var(--muted); font-size: .82rem; line-height: 1.5; margin-bottom: 1.8rem; }
+.seal-ico { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
+body.light .seal-ico { filter: invert(1); }
+.splash-seal .seal-ico { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+ max-width: 300px; text-align: center; color: var(--muted); font-size: .82rem; line-height: 1.5; margin-bottom: 1.8rem; }
 .room-code-label { font-family: 'IBM Plex Mono', monospace; font-size: .55rem; letter-spacing: .35em; color: var(--muted); text-transform: uppercase; margin-bottom: .8rem; }
 .room-code { font-family: 'IBM Plex Mono', monospace; font-size: 2.8rem; letter-spacing: .5em; font-weight: 600; color: var(--accent); padding: .6rem 0 .6rem .5em; border: 1px solid var(--accent); border-radius: 8px; min-width: 220px; text-align: center; box-shadow: inset 0 0 22px rgba(255,255,255,.06); margin-bottom: 1.5rem; }
 body.light .room-code { box-shadow: inset 0 0 22px rgba(0,0,0,.05); }
@@ -389,12 +392,12 @@ body.light .room-code { box-shadow: inset 0 0 22px rgba(0,0,0,.05); }
 
 <!-- SPLASH -->
 <div id="app-splash">
-  <div class="splash-seal"><svg viewBox="0 0 64 64" style="color:var(--accent)"><use href="#ico-board"/></svg></div>
+  <div class="splash-seal"><img src="icon-512.png" class="seal-ico"></div>
 </div>
 
 <!-- HOME -->
 <div id="screen-home" class="screen visible">
-  <div class="seal"><svg style="color:var(--accent)"><use href="#ico-board"/></svg></div>
+  <div class="seal"><img src="icon-512.png" class="seal-ico"></div>
   <div class="title"><em>Bagh</em><span>Chal</span></div>
   <div class="subtitle">tigres y cabras</div>
   <div class="btn-row">
@@ -406,7 +409,7 @@ body.light .room-code { box-shadow: inset 0 0 22px rgba(0,0,0,.05); }
 
 <!-- SETUP (un jugador) -->
 <div id="screen-setup" class="screen">
-  <div class="seal"><svg style="color:var(--accent)"><use href="#ico-board"/></svg></div>
+  <div class="seal"><img src="icon-512.png" class="seal-ico"></div>
   <div class="subtitle">un jugador</div>
 
   <div class="section-label">elige tu bando</div>
@@ -436,7 +439,7 @@ body.light .room-code { box-shadow: inset 0 0 22px rgba(0,0,0,.05); }
 
 <!-- ONLINE: menú -->
 <div id="screen-online" class="screen">
-  <div class="seal"><svg style="color:var(--accent)"><use href="#ico-board"/></svg></div>
+  <div class="seal"><img src="icon-512.png" class="seal-ico"></div>
   <div class="subtitle">jugar online</div>
   <div class="online-intro">Juega en dos dispositivos. Uno crea la sala y comparte el código; el otro se une.</div>
   <div class="btn-row">
@@ -448,7 +451,7 @@ body.light .room-code { box-shadow: inset 0 0 22px rgba(0,0,0,.05); }
 
 <!-- ONLINE: crear sala (elegir bando) -->
 <div id="screen-create" class="screen">
-  <div class="seal"><svg style="color:var(--accent)"><use href="#ico-board"/></svg></div>
+  <div class="seal"><img src="icon-512.png" class="seal-ico"></div>
   <div class="subtitle">crear sala</div>
 
   <div class="section-label">elige tu bando</div>
@@ -471,7 +474,7 @@ body.light .room-code { box-shadow: inset 0 0 22px rgba(0,0,0,.05); }
 
 <!-- ONLINE: sala de espera -->
 <div id="screen-wait" class="screen">
-  <div class="seal pulsing"><svg style="color:var(--accent)"><use href="#ico-board"/></svg></div>
+  <div class="seal pulsing"><img src="icon-512.png" class="seal-ico"></div>
   <div class="subtitle">sala creada</div>
   <div class="room-code-label">comparte este código</div>
   <div class="room-code" id="room-code">····</div>
@@ -481,7 +484,7 @@ body.light .room-code { box-shadow: inset 0 0 22px rgba(0,0,0,.05); }
 
 <!-- ONLINE: unirse -->
 <div id="screen-join" class="screen">
-  <div class="seal"><svg style="color:var(--accent)"><use href="#ico-board"/></svg></div>
+  <div class="seal"><img src="icon-512.png" class="seal-ico"></div>
   <div class="subtitle">unirse a sala</div>
   <div class="section-label">introduce el código</div>
   <input id="join-input" class="code-input" type="text" inputmode="latin" autocomplete="off" maxlength="4" placeholder="ABCD" />
