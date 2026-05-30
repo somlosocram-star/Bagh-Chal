@@ -1,0 +1,19 @@
+{
+  "name": "Bagh Chal",
+  "short_name": "Bagh Chal",
+  "description": "El juego tradicional nepalí de tigres y cabras. 4 tigres contra 20 cabras sobre un tablero de 25 intersecciones.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0b0b0c",
+  "theme_color": "#0b0b0c",
+  "lang": "es",
+  "categories": ["games", "board"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

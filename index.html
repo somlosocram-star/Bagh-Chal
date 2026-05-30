@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0b0c">
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bagh Chal">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="description" content="Bagh Chal — el juego nepalí de los tigres y las cabras. 4 tigres contra 20 cabras.">
+
+<title>Bagh Chal · Tigres y Cabras</title>
+
+<script>
+  (function () {
+    try {
+      if (localStorage.getItem('baghchal_theme') === 'light') {
+        document.documentElement.classList.add('pre-light');
+      }
+    } catch (e) {}
+    window.addEventListener('DOMContentLoaded', function () {
+      setTimeout(function () {
+        var s = document.getElementById('app-splash');
+        if (s && s.style.display !== 'none') {
+          s.style.transition = 'opacity 0.6s'; s.style.opacity = '0';
+          setTimeout(function () { s.style.display = 'none'; }, 650);
+        }
+      }, 5000);
+    });
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,700;1,500;1,700&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0b0b0c;
+  --panel: #141416;
+  --panel-2: #1b1b1f;
+  --line: #2c2c30;
+  --text: #f4f4f2;
+  --muted: #76767c;
+  --accent: #f4f4f2;          /* el "color" en blanco y negro: el blanco */
+  --board-line: rgba(244,244,242,0.34);
+  --node: rgba(244,244,242,0.55);
+  --grain-opacity: 0.45;
+  --vignette: rgba(0,0,0,0.5);
+  --on-accent: #0b0b0c;       /* texto sobre el acento */
+}
+body.light, html.pre-light body {
+  --bg: #f3f2ee;
+  --panel: #e7e6df;
+  --panel-2: #eeede7;
+  --line: #d2d0c6;
+  --text: #17171a;
+  --muted: #8c8b81;
+  --accent: #17171a;
+  --board-line: rgba(23,23,26,0.30);
+  --node: rgba(23,23,26,0.5);
+  --grain-opacity: 0.16;
+  --vignette: rgba(60,58,50,0.10);
+  --on-accent: #f3f2ee;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Cormorant Garamond', serif;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255,255,255,0.05) 0%, transparent 62%),
+    radial-gradient(ellipse 60% 80% at 50% 100%, rgba(255,255,255,0.03) 0%, transparent 62%);
+  background-attachment: fixed;
+  position: relative;
+  overscroll-behavior: none;
+  -webkit-user-select: none; user-select: none;
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+body.light {
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0,0,0,0.04) 0%, transparent 62%),
+    radial-gradient(ellipse 60% 80% at 50% 100%, rgba(0,0,0,0.03) 0%, transparent 62%);
+}
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 1;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  opacity: var(--grain-opacity); mix-blend-mode: overlay;
+}
+body::after {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 1;
+  background: radial-gradient(ellipse at center, transparent 52%, var(--vignette) 100%);
+}
+.mono { font-family: 'IBM Plex Mono', monospace; font-feature-settings: "tnum"; }
+
+/* ---------- Controles flotantes ---------- */
+#theme-toggle {
+  position: fixed; top: max(1rem, env(safe-area-inset-top)); right: 1.2rem; z-index: 500;
+  width: 56px; height: 30px; border-radius: 15px; border: 1px solid var(--line);
+  background: var(--panel); cursor: pointer; outline: none; padding: 0;
+  display: flex; align-items: center; transition: background .3s, border-color .3s;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
+}
+#theme-toggle .knob {
+  position: absolute; width: 24px; height: 24px; border-radius: 50%; left: 2px;
+  background: radial-gradient(circle at 35% 30%, #ffffff, #cfcfcf 70%, #9a9a9a);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.5);
+  transition: transform .3s cubic-bezier(.2,.9,.3,1);
+  display: flex; align-items: center; justify-content: center; font-size: .7rem; line-height: 1;
+}
+#theme-toggle .knob::after { content: '☾'; color: #1a1a1a; }
+body.light #theme-toggle .knob { transform: translateX(26px); background: radial-gradient(circle at 35% 30%, #3a3a3a, #1a1a1a 70%, #000); }
+body.light #theme-toggle .knob::after { content: '☀'; color: #f3f2ee; }
+body.light #theme-toggle { border-color: var(--accent); }
+
+#sound-toggle {
+  position: fixed; top: max(1rem, env(safe-area-inset-top)); right: 5.2rem; z-index: 500;
+  width: 38px; height: 30px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--panel); cursor: pointer; outline: none; padding: 0;
+  display: flex; align-items: center; justify-content: center; font-size: .95rem;
+  color: var(--text); transition: background .3s, border-color .3s, color .3s;
+}
+#sound-toggle.muted { color: var(--muted); }
+#sound-toggle .ic-on { display: inline; } #sound-toggle .ic-off { display: none; }
+#sound-toggle.muted .ic-on { display: none; } #sound-toggle.muted .ic-off { display: inline; }
+
+#help-btn {
+  position: fixed; top: max(1rem, env(safe-area-inset-top)); left: 1.2rem; z-index: 500;
+  width: 30px; height: 30px; border-radius: 50%; border: none; outline: none; cursor: pointer;
+  background: var(--accent); color: var(--on-accent);
+  font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 700;
+  font-size: 1.1rem; line-height: 1; display: flex; align-items: center; justify-content: center;
+  transition: transform .1s, background .3s, color .3s; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+#help-btn:active { transform: scale(0.9); }
+
+body.in-game #theme-toggle, body.in-game #sound-toggle, body.in-game #help-btn { opacity: .25; transition: opacity .3s; }
+body.in-game #theme-toggle:active, body.in-game #sound-toggle:active, body.in-game #help-btn:active { opacity: .9; }
+
+/* ---------- Tutorial ---------- */
+#tutorial-overlay {
+  position: fixed; inset: 0; z-index: 600; background: color-mix(in srgb, var(--bg) 97%, transparent);
+  display: none; flex-direction: column; padding: 2rem 1.4rem 1.4rem; overflow-y: auto;
+}
+#tutorial-overlay.visible { display: flex; animation: screenIn .4s ease both; }
+#tutorial-overlay h2 { font-style: italic; font-size: clamp(2rem,7vw,2.8rem); font-weight: 500; text-align: center; margin-bottom: .2rem; }
+#tutorial-overlay .tut-sub { font-family: 'IBM Plex Mono', monospace; font-size: .6rem; letter-spacing: .4em; color: var(--muted); text-align: center; text-transform: uppercase; margin-bottom: 1.8rem; }
+.tut-step { display: flex; gap: .9rem; align-items: flex-start; margin: 0 auto 1.2rem; max-width: 480px; width: 100%; }
+.tut-num { flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--accent); color: var(--accent); font-family: 'IBM Plex Mono', monospace; font-size: .8rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.tut-text { font-size: 1.15rem; line-height: 1.45; text-align: left; }
+.tut-text b { font-weight: 700; border-bottom: 1px solid var(--muted); }
+.tut-close { align-self: center; margin: .8rem 0 1rem; }
+
+/* ---------- Splash ---------- */
+#app-splash { position: fixed; inset: 0; z-index: 1000; background: var(--bg); display: flex; align-items: center; justify-content: center; transition: opacity .6s ease; }
+html.pre-light #app-splash { background: #f3f2ee; }
+#app-splash.hiding { opacity: 0; pointer-events: none; }
+.splash-seal { width: 150px; height: 150px; border-radius: 50%; border: 1px solid var(--accent); display: flex; align-items: center; justify-content: center; position: relative; box-shadow: inset 0 0 40px rgba(255,255,255,.08), 0 0 80px rgba(255,255,255,.06); animation: sealMint 1.1s cubic-bezier(.2,.9,.3,1) both; overflow: hidden; }
+body.light .splash-seal { box-shadow: inset 0 0 40px rgba(0,0,0,.06), 0 0 80px rgba(0,0,0,.05); }
+.splash-seal::after { content: ''; position: absolute; border-radius: 50%; border: 1px dotted var(--muted); inset: -14px; animation: ringSpin 9s linear infinite; opacity: .6; }
+.splash-seal svg { width: 78px; height: 78px; animation: glyphDrop .7s cubic-bezier(.3,1.4,.5,1) both; animation-delay: .45s; }
+@keyframes sealMint { 0%{opacity:0; transform: scale(.3) rotateY(180deg);} 60%{opacity:1; transform: scale(1.08);} 100%{opacity:1; transform: scale(1);} }
+@keyframes glyphDrop { 0%{opacity:0; transform: translateY(-34px) scale(1.4);} 70%{opacity:1; transform: translateY(3px) scale(.96);} 100%{opacity:1; transform: translateY(0) scale(1);} }
+@keyframes ringSpin { to { transform: rotate(360deg); } }
+
+/* ---------- Pantallas ---------- */
+.screen { display: none; position: fixed; inset: 0; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem; text-align: center; z-index: 5; overflow-y: auto; }
+.screen.visible { display: flex; animation: screenIn .45s cubic-bezier(.2,.8,.3,1) both; }
+@keyframes screenIn { 0%{opacity:0; transform: translateY(12px);} 100%{opacity:1; transform: translateY(0);} }
+
+.seal { width: 64px; height: 64px; border-radius: 50%; border: 1px solid var(--accent); display: flex; align-items: center; justify-content: center; margin-bottom: 1.4rem; position: relative; box-shadow: inset 0 0 20px rgba(255,255,255,.06); flex-shrink: 0; }
+body.light .seal { box-shadow: inset 0 0 20px rgba(0,0,0,.05); }
+.seal::after { content: ''; position: absolute; border-radius: 50%; border: 1px dotted var(--muted); inset: -8px; opacity: .45; }
+.seal svg { width: 38px; height: 38px; }
+
+.title { font-size: clamp(2.4rem, 9vw, 4.2rem); font-weight: 500; font-style: italic; line-height: .92; letter-spacing: -.01em; margin-bottom: .2rem; }
+.title span { display: block; font-style: normal; font-weight: 700; letter-spacing: -.02em; }
+.subtitle { font-family: 'IBM Plex Mono', monospace; font-size: .62rem; letter-spacing: .5em; color: var(--muted); margin: 1.1rem 0 2rem; text-transform: uppercase; display: flex; align-items: center; gap: .8rem; }
+.subtitle::before, .subtitle::after { content: '·'; font-size: 1.4rem; opacity: .6; }
+
+.btn { background: transparent; border: 1px solid var(--accent); color: var(--accent); padding: 1rem 2rem; font-family: 'IBM Plex Mono', monospace; font-size: .75rem; letter-spacing: .35em; cursor: pointer; outline: none; text-transform: uppercase; transition: all .2s; min-width: 230px; }
+.btn:hover, .btn:active { background: var(--accent); color: var(--on-accent); }
+.btn-secondary { border-color: var(--line); color: var(--muted); font-size: .65rem; padding: .7rem 1.5rem; letter-spacing: .3em; min-width: 0; }
+.btn-secondary:hover, .btn-secondary:active { border-color: var(--text); color: var(--text); background: transparent; }
+.btn-row { display: flex; flex-direction: column; gap: .8rem; align-items: center; }
+.btn-back-row { margin-top: 1.4rem; }
+.section-label { font-family: 'IBM Plex Mono', monospace; font-size: .58rem; letter-spacing: .3em; color: var(--muted); text-transform: uppercase; margin-bottom: .7rem; }
+
+/* tarjetas de selección (bando / dificultad) */
+.cards { display: flex; gap: .8rem; flex-wrap: wrap; justify-content: center; margin-bottom: 1.6rem; }
+.card { width: 132px; background: linear-gradient(180deg, var(--panel-2) 0%, var(--panel) 100%); border: 1px solid var(--line); border-radius: 8px; cursor: pointer; outline: none; position: relative; display: flex; flex-direction: column; align-items: center; padding: 1rem .6rem; transition: all .2s ease; overflow: hidden; }
+.card::before { content: ''; position: absolute; top: 0; left: 25%; right: 25%; height: 1px; background: linear-gradient(90deg, transparent, var(--accent), transparent); opacity: .4; }
+.card:active, .card.selected { border-color: var(--accent); box-shadow: 0 0 30px rgba(255,255,255,.06); }
+body.light .card.selected { box-shadow: 0 0 30px rgba(0,0,0,.05); }
+.card svg { width: 46px; height: 46px; margin-bottom: .5rem; }
+.card .c-name { font-family: 'IBM Plex Mono', monospace; font-size: .62rem; letter-spacing: .25em; text-transform: uppercase; font-weight: 700; }
+.card .c-desc { font-size: 1rem; color: var(--muted); line-height: 1.15; margin-top: .25rem; }
+.card.small { width: 100px; padding: .8rem .5rem; }
+.card.small .c-roman { font-style: italic; font-size: 1.6rem; font-weight: 500; line-height: 1; }
+
+/* ---------- Pantalla de juego ---------- */
+#screen-game { padding: 0; display: none; flex-direction: column; justify-content: flex-start; text-align: center; }
+#screen-game.visible { display: flex; }
+.game-head { flex: 0 0 auto; width: 100%; padding: max(.7rem, env(safe-area-inset-top)) 1rem .4rem; }
+.status-bar { display: flex; align-items: stretch; justify-content: center; gap: .5rem; max-width: 460px; margin: 0 auto; }
+.stat-chip { flex: 1 1 0; min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: .45rem .4rem; display: flex; flex-direction: column; align-items: center; gap: .15rem; }
+.stat-chip.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.stat-chip .ci { display: flex; align-items: center; gap: .35rem; }
+.stat-chip svg { width: 20px; height: 20px; }
+.stat-chip .cv { font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 1.05rem; line-height: 1; }
+.stat-chip .cl { font-family: 'IBM Plex Mono', monospace; font-size: .48rem; letter-spacing: .18em; color: var(--muted); text-transform: uppercase; }
+
+.turn-line { margin: .55rem auto .2rem; font-family: 'IBM Plex Mono', monospace; font-size: .62rem; letter-spacing: .28em; text-transform: uppercase; color: var(--muted); min-height: 1.1em; display: flex; align-items: center; justify-content: center; gap: .5rem; }
+.turn-line b { color: var(--text); font-weight: 700; }
+.turn-line .thinking { color: var(--accent); }
+.turn-line .dots::after { content: ''; animation: dots 1.4s steps(4) infinite; }
+@keyframes dots { 0%{content:'';} 25%{content:'.';} 50%{content:'..';} 75%{content:'...';} }
+
+.board-wrap { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; width: 100%; padding: .3rem; min-height: 0; }
+#board { width: min(94vw, 60vh); height: min(94vw, 60vh); max-width: 560px; max-height: 560px; touch-action: manipulation; }
+.edge { stroke: var(--board-line); stroke-width: 0.7; }
+.node-dot { fill: var(--node); }
+.hit { fill: transparent; cursor: pointer; }
+.mv-dot { fill: var(--accent); opacity: .55; animation: pulse 1.3s ease-in-out infinite; pointer-events: none; }
+.mv-cap { fill: none; stroke: var(--accent); stroke-width: 1.1; stroke-dasharray: 2 1.6; opacity: .9; animation: spin 6s linear infinite; pointer-events: none; transform-box: fill-box; transform-origin: center; }
+@keyframes pulse { 0%,100%{opacity:.3; transform: scale(.85); transform-box: fill-box; transform-origin: center;} 50%{opacity:.7; transform: scale(1.1); transform-box: fill-box; transform-origin: center;} }
+@keyframes spin { to { transform: rotate(360deg); } }
+.sel-ring { fill: none; stroke: var(--accent); stroke-width: 1; opacity: .9; }
+.last-ring { fill: none; stroke: var(--muted); stroke-width: 0.8; opacity: .6; }
+.piece { pointer-events: none; }
+.piece.appear { animation: piecePop .3s cubic-bezier(.3,1.4,.5,1) both; transform-box: fill-box; transform-origin: center; }
+@keyframes piecePop { 0%{opacity:0; transform: scale(.2);} 70%{transform: scale(1.12);} 100%{opacity:1; transform: scale(1);} }
+
+.game-foot { flex: 0 0 auto; width: 100%; padding: .5rem 1rem max(.9rem, env(safe-area-inset-bottom)); display: flex; gap: .7rem; justify-content: center; }
+.game-foot .btn-secondary { min-width: 96px; text-align: center; }
+
+/* ---------- Fin de partida ---------- */
+#end-overlay { position: fixed; inset: 0; z-index: 620; background: color-mix(in srgb, var(--bg) 92%, transparent); display: none; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; }
+#end-overlay.visible { display: flex; animation: screenIn .5s ease both; }
+#end-overlay .seal { animation: sealMint 1s cubic-bezier(.2,.9,.3,1) both; }
+#end-title { font-style: italic; font-size: clamp(2.2rem, 9vw, 3.4rem); font-weight: 500; text-align: center; }
+#end-sub { font-family: 'IBM Plex Mono', monospace; font-size: .65rem; letter-spacing: .35em; color: var(--muted); text-transform: uppercase; margin: .6rem 0 2rem; text-align: center; }
+</style>
+</head>
+<body>
+
+<!-- Música -->
+<audio id="music-menu" src="music-menu.mp3" loop preload="auto"></audio>
+<audio id="music-1" src="music-1.mp3" loop preload="auto"></audio>
+<audio id="music-2" src="music-2.mp3" loop preload="auto"></audio>
+
+<!-- Definiciones SVG de las fichas -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- CABRA (blanca) -->
+    <symbol id="ico-goat" viewBox="0 0 64 64">
+      <g stroke="#111" stroke-width="1.3" stroke-linejoin="round">
+        <path d="M25 19 Q14 13 11 3 Q21 6 27 15 Z" fill="#f6f6f4"/>
+        <path d="M39 19 Q50 13 53 3 Q43 6 37 15 Z" fill="#f6f6f4"/>
+        <ellipse cx="17" cy="29" rx="7" ry="3.4" fill="#f6f6f4" transform="rotate(-22 17 29)"/>
+        <ellipse cx="47" cy="29" rx="7" ry="3.4" fill="#f6f6f4" transform="rotate(22 47 29)"/>
+        <path d="M32 16 C24 16 20 24 20 33 C20 45 26 54 32 57 C38 54 44 45 44 33 C44 24 40 16 32 16 Z" fill="#f6f6f4"/>
+        <path d="M28 54 L32 63 L36 54 Z" fill="#f6f6f4"/>
+      </g>
+      <g fill="#111" stroke="none">
+        <circle cx="27" cy="33" r="2.4"/><circle cx="37" cy="33" r="2.4"/>
+        <circle cx="30" cy="49" r="1.3"/><circle cx="34" cy="49" r="1.3"/>
+      </g>
+    </symbol>
+    <!-- TIGRE (blanco y negro) -->
+    <symbol id="ico-tiger" viewBox="0 0 64 64">
+      <g stroke="#111" stroke-width="1.4" stroke-linejoin="round">
+        <path d="M13 7 L27 16 L11 22 Z" fill="#f6f6f4"/>
+        <path d="M51 7 L37 16 L53 22 Z" fill="#f6f6f4"/>
+        <circle cx="32" cy="36" r="22" fill="#f6f6f4"/>
+      </g>
+      <g stroke="#111" stroke-width="2.4" stroke-linecap="round" fill="none">
+        <line x1="32" y1="15" x2="32" y2="27"/>
+        <line x1="26" y1="17" x2="27.5" y2="28"/>
+        <line x1="38" y1="17" x2="36.5" y2="28"/>
+        <line x1="10" y1="33" x2="20" y2="35"/>
+        <line x1="9.5" y1="39" x2="20" y2="40"/>
+        <line x1="11" y1="46" x2="20" y2="44"/>
+        <line x1="54" y1="33" x2="44" y2="35"/>
+        <line x1="54.5" y1="39" x2="44" y2="40"/>
+        <line x1="53" y1="46" x2="44" y2="44"/>
+      </g>
+      <g fill="#111" stroke="none">
+        <ellipse cx="25" cy="34" rx="3.1" ry="4"/><ellipse cx="39" cy="34" rx="3.1" ry="4"/>
+        <path d="M28 43 Q32 48 36 43 Q34 46 32 46 Q30 46 28 43 Z"/>
+      </g>
+      <line x1="32" y1="46" x2="32" y2="50" stroke="#111" stroke-width="2"/>
+    </symbol>
+    <!-- mini tablero (sello) -->
+    <symbol id="ico-board" viewBox="0 0 64 64">
+      <g stroke="currentColor" stroke-width="1.4" fill="none" opacity="0.9">
+        <rect x="8" y="8" width="48" height="48"/>
+        <line x1="8" y1="32" x2="56" y2="32"/><line x1="32" y1="8" x2="32" y2="56"/>
+        <line x1="8" y1="8" x2="56" y2="56"/><line x1="56" y1="8" x2="8" y2="56"/>
+        <line x1="32" y1="8" x2="8" y2="32"/><line x1="32" y1="8" x2="56" y2="32"/>
+        <line x1="8" y1="32" x2="32" y2="56"/><line x1="56" y1="32" x2="32" y2="56"/>
+      </g>
+      <g fill="currentColor"><circle cx="8" cy="8" r="4"/><circle cx="56" cy="8" r="4"/><circle cx="8" cy="56" r="4"/><circle cx="56" cy="56" r="4"/></g>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- Controles flotantes -->
+<button id="theme-toggle" aria-label="Cambiar tema"><span class="knob"></span></button>
+<button id="sound-toggle" aria-label="Sonido"><span class="ic-on">♪</span><span class="ic-off">✕</span></button>
+<button id="help-btn" aria-label="Cómo se juega">?</button>
+
+<!-- TUTORIAL -->
+<div id="tutorial-overlay">
+  <h2>Cómo se juega</h2>
+  <div class="tut-sub">bagh chal · tigres y cabras</div>
+  <div class="tut-step"><div class="tut-num">1</div><div class="tut-text">Se enfrentan <b>4 tigres</b> contra <b>20 cabras</b>. Los tigres empiezan en las esquinas; las cabras, fuera del tablero. <b>Mueven primero las cabras.</b></div></div>
+  <div class="tut-step"><div class="tut-num">2</div><div class="tut-text">Mientras queden cabras por colocar, el turno de las cabras consiste en <b>poner una</b> en cualquier intersección libre. Cuando estén las 20, las cabras pasan a <b>moverse</b> a una intersección adyacente.</div></div>
+  <div class="tut-step"><div class="tut-num">3</div><div class="tut-text">Los tigres siempre <b>se mueven</b> a una intersección contigua o <b>capturan</b> saltando en línea recta sobre una cabra adyacente, cayendo en la casilla libre del otro lado.</div></div>
+  <div class="tut-step"><div class="tut-num">4</div><div class="tut-text">Solo se puede mover siguiendo las <b>líneas</b> del tablero. Las diagonales solo existen donde están dibujadas.</div></div>
+  <div class="tut-step"><div class="tut-num">★</div><div class="tut-text">Las <b>cabras ganan</b> si encierran a los tigres sin dejarles ningún movimiento. Los <b>tigres ganan</b> si capturan <b>5 cabras</b>.</div></div>
+  <div class="tut-step"><div class="tut-num">↺</div><div class="tut-text">Una vez colocadas todas las cabras, no se puede repetir una posición ya vista antes (evita partidas eternas).</div></div>
+  <button class="btn-secondary btn tut-close" id="tut-close">cerrar</button>
+</div>
+
+<!-- SPLASH -->
+<div id="app-splash">
+  <div class="splash-seal"><svg viewBox="0 0 64 64" style="color:var(--accent)"><use href="#ico-board"/></svg></div>
+</div>
+
+<!-- HOME -->
+<div id="screen-home" class="screen visible">
+  <div class="seal"><svg style="color:var(--accent)"><use href="#ico-board"/></svg></div>
+  <div class="title"><em>Bagh</em><span>Chal</span></div>
+  <div class="subtitle">tigres y cabras</div>
+  <div class="btn-row">
+    <button class="btn" id="btn-1p">Un jugador</button>
+    <button class="btn" id="btn-2p">Dos jugadores</button>
+  </div>
+</div>
+
+<!-- SETUP (un jugador) -->
+<div id="screen-setup" class="screen">
+  <div class="seal"><svg style="color:var(--accent)"><use href="#ico-board"/></svg></div>
+  <div class="subtitle">un jugador</div>
+
+  <div class="section-label">elige tu bando</div>
+  <div class="cards" id="side-cards">
+    <button class="card selected" data-side="G">
+      <svg><use href="#ico-goat"/></svg>
+      <div class="c-name">Cabras</div>
+      <div class="c-desc">Encierra a los tigres</div>
+    </button>
+    <button class="card" data-side="T">
+      <svg><use href="#ico-tiger"/></svg>
+      <div class="c-name">Tigres</div>
+      <div class="c-desc">Captura 5 cabras</div>
+    </button>
+  </div>
+
+  <div class="section-label">dificultad</div>
+  <div class="cards" id="diff-cards">
+    <button class="card small" data-diff="facil"><div class="c-roman">I</div><div class="c-name">Fácil</div></button>
+    <button class="card small selected" data-diff="normal"><div class="c-roman">II</div><div class="c-name">Normal</div></button>
+    <button class="card small" data-diff="dificil"><div class="c-roman">III</div><div class="c-name">Difícil</div></button>
+  </div>
+
+  <button class="btn" id="btn-play">Jugar →</button>
+  <div class="btn-back-row"><button class="btn-secondary btn" id="btn-setup-back">← volver</button></div>
+</div>
+
+<!-- JUEGO -->
+<div id="screen-game" class="screen">
+  <div class="game-head">
+    <div class="status-bar">
+      <div class="stat-chip" id="chip-goat">
+        <div class="ci"><svg><use href="#ico-goat"/></svg><span class="cv" id="goat-count">20</span></div>
+        <div class="cl" id="goat-label">por colocar</div>
+      </div>
+      <div class="stat-chip" id="chip-tiger">
+        <div class="ci"><svg><use href="#ico-tiger"/></svg><span class="cv" id="cap-count">0/5</span></div>
+        <div class="cl">capturadas</div>
+      </div>
+    </div>
+    <div class="turn-line" id="turn-line"></div>
+  </div>
+
+  <div class="board-wrap">
+    <svg id="board" viewBox="0 0 100 100" aria-label="Tablero Bagh Chal"></svg>
+  </div>
+
+  <div class="game-foot">
+    <button class="btn-secondary btn" id="btn-restart">Reiniciar</button>
+    <button class="btn-secondary btn" id="btn-undo">Deshacer</button>
+    <button class="btn-secondary btn" id="btn-menu">Menú</button>
+  </div>
+</div>
+
+<!-- FIN -->
+<div id="end-overlay">
+  <div class="seal"><svg id="end-icon" style="color:var(--accent)"><use href="#ico-tiger"/></svg></div>
+  <div id="end-title">—</div>
+  <div id="end-sub">—</div>
+  <div class="btn-row">
+    <button class="btn" id="btn-rematch">Revancha</button>
+    <button class="btn-secondary btn" id="btn-end-menu">Menú</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+
+/* =====================================================================
+   GEOMETRÍA Y REGLAS
+   ===================================================================== */
+const TIGER = 'T', GOAT = 'G', EMPTY = null;
+const N = 5;
+const inb = (r,c) => r>=0 && r<N && c>=0 && c<N;
+const rc = i => [Math.floor(i/N), i%N];
+
+// Adyacencia: ortogonal siempre; diagonal solo en puntos de suma par.
+const adj = [];
+(function buildAdj(){
+  for (let r=0;r<N;r++) for (let c=0;c<N;c++){
+    const list = [];
+    [[r-1,c],[r+1,c],[r,c-1],[r,c+1]].forEach(([nr,nc])=>{ if(inb(nr,nc)) list.push(nr*N+nc); });
+    if ((r+c)%2===0){
+      [[r-1,c-1],[r-1,c+1],[r+1,c-1],[r+1,c+1]].forEach(([nr,nc])=>{ if(inb(nr,nc)) list.push(nr*N+nc); });
+    }
+    adj[r*N+c] = list;
+  }
+})();
+const adjSet = adj.map(l => new Set(l));
+
+// Capturas posibles de un tigre en p sobre un tablero bd
+function tigerCaptures(p, bd){
+  const res = []; const [pr,pc] = rc(p);
+  for (const o of adj[p]){
+    const [or_,oc] = rc(o);
+    const dr = or_-pr, dc = oc-pc;
+    const lr = or_+dr, lc = oc+dc;
+    if (!inb(lr,lc)) continue;
+    const l = lr*N+lc;
+    if (!adjSet[o].has(l)) continue;       // la 2ª pata debe ser arista válida
+    if (bd[o]===GOAT && bd[l]===EMPTY) res.push({over:o, to:l});
+  }
+  return res;
+}
+
+// Generar movimientos para un estado {board,turn,goatsToPlace,goatsCaptured}
+function genMoves(s){
+  const bd = s.board, t = s.turn, mv = [];
+  if (t===GOAT){
+    if (s.goatsToPlace>0){
+      for (let i=0;i<25;i++) if (bd[i]===EMPTY) mv.push({type:'place', to:i});
+    } else {
+      for (let i=0;i<25;i++) if (bd[i]===GOAT)
+        for (const n of adj[i]) if (bd[n]===EMPTY) mv.push({type:'move', from:i, to:n});
+    }
+  } else {
+    for (let i=0;i<25;i++) if (bd[i]===TIGER){
+      for (const cap of tigerCaptures(i,bd)) mv.push({type:'capture', from:i, over:cap.over, to:cap.to});
+      for (const n of adj[i]) if (bd[n]===EMPTY) mv.push({type:'move', from:i, to:n});
+    }
+  }
+  return mv;
+}
+
+function applyMove(s, m){
+  const bd = s.board.slice();
+  let gtp = s.goatsToPlace, gc = s.goatsCaptured;
+  if (m.type==='place'){ bd[m.to]=GOAT; gtp--; }
+  else if (m.type==='move'){ bd[m.to]=bd[m.from]; bd[m.from]=EMPTY; }
+  else { bd[m.from]=EMPTY; bd[m.over]=EMPTY; bd[m.to]=TIGER; gc++; }
+  return { board:bd, turn: t2(s.turn), goatsToPlace:gtp, goatsCaptured:gc };
+}
+const t2 = t => t===GOAT?TIGER:GOAT;
+
+/* =====================================================================
+   IA (minimax + poda alfa-beta). Evaluación desde la óptica del TIGRE.
+   ===================================================================== */
+function tigerMobility(bd){
+  let moves=0, trapped=0, caps=0;
+  for (let i=0;i<25;i++) if (bd[i]===TIGER){
+    let m=0; const cp=tigerCaptures(i,bd); caps+=cp.length; m+=cp.length;
+    for (const n of adj[i]) if (bd[n]===EMPTY) m++;
+    moves+=m; if (m===0) trapped++;
+  }
+  return {moves,trapped,caps};
+}
+function evaluate(s){
+  const {moves,trapped,caps} = tigerMobility(s.board);
+  // capturas (lo más importante), amenazas de captura (las cabras deben evitarlas),
+  // movilidad del tigre y tigres atrapados (las cabras quieren maximizarlo)
+  return s.goatsCaptured*240 + caps*38 + moves*2 - trapped*60;
+}
+function order(moves){ // capturas primero ⇒ mejor poda
+  return moves.sort((a,b)=> (b.type==='capture'?1:0) - (a.type==='capture'?1:0));
+}
+let nodeBudget = 0;
+function search(s, depth, alpha, beta){
+  if (s.goatsCaptured>=5) return 100000 + depth;       // tigres ganan
+  const moves = genMoves(s);
+  if (moves.length===0) return s.turn===TIGER ? -100000 - depth : 100000 + depth;
+  if (depth===0 || nodeBudget<=0) return evaluate(s);
+  nodeBudget--;
+  order(moves);
+  if (s.turn===TIGER){
+    let best=-Infinity;
+    for (const m of moves){
+      best = Math.max(best, search(applyMove(s,m), depth-1, alpha, beta));
+      alpha = Math.max(alpha, best); if (alpha>=beta) break;
+    }
+    return best;
+  } else {
+    let best=Infinity;
+    for (const m of moves){
+      best = Math.min(best, search(applyMove(s,m), depth-1, alpha, beta));
+      beta = Math.min(beta, best); if (alpha>=beta) break;
+    }
+    return best;
+  }
+}
+function aiPick(){
+  const root = legalMoves();
+  if (!root.length) return null;
+  if (difficulty==='facil' && Math.random()<0.45) return root[(Math.random()*root.length)|0];
+  const depth = {facil:2, normal:3, dificil:4}[difficulty];
+  nodeBudget = 220000;
+  const s = curState();
+  order(root);
+  let best=[], bestVal = turn===TIGER ? -Infinity : Infinity;
+  for (const m of root){
+    const v = search(applyMove(s,m), depth-1, -Infinity, Infinity);
+    if (turn===TIGER){ if (v>bestVal){bestVal=v;best=[m];} else if (v===bestVal) best.push(m); }
+    else            { if (v<bestVal){bestVal=v;best=[m];} else if (v===bestVal) best.push(m); }
+  }
+  return best[(Math.random()*best.length)|0];
+}
+
+/* =====================================================================
+   ESTADO DE LA PARTIDA
+   ===================================================================== */
+let board, turn, goatsToPlace, goatsCaptured, selected, gameOver, winner;
+let mode, humanSide, difficulty;
+let positionSet, undoStack, lastMove, aiThinking, aiTimer;
+
+const curState = () => ({ board:board.slice(), turn, goatsToPlace, goatsCaptured });
+const stateKey = (bd=board, t=turn) => bd.map(x=> x||'-').join('') + '|' + t;
+
+function newGame(){
+  board = new Array(25).fill(EMPTY);
+  [0,4,20,24].forEach(i => board[i]=TIGER);   // esquinas (0,0)(0,4)(4,0)(4,4)
+  turn = GOAT;                                 // empiezan las cabras
+  goatsToPlace = 20; goatsCaptured = 0;
+  selected = -1; gameOver = false; winner = null;
+  positionSet = new Set(); undoStack = []; lastMove = null;
+  aiThinking = false; if (aiTimer) clearTimeout(aiTimer);
+  buildBoardStatic();
+  render();
+  startGameMusic();
+  if (isAITurn()) scheduleAI();
+}
+
+const isAITurn = () => mode==='ai' && turn!==humanSide && !gameOver;
+const isHumanTurn = () => mode==='two' || turn===humanSide;
+
+function rawMoves(side){ return genMoves({board, turn:side, goatsToPlace, goatsCaptured}); }
+function createsRepeat(m){
+  if (goatsToPlace>0) return false;
+  const ns = applyMove(curState(), m);
+  return positionSet.has(stateKey(ns.board, ns.turn));
+}
+function legalMoves(){
+  let mv = rawMoves(turn);
+  if (goatsToPlace===0){
+    const f = mv.filter(m=>!createsRepeat(m));
+    if (f.length) mv = f;     // si TODO repite (raro), se permite repetir
+  }
+  return mv;
+}
+
+function commitMove(m){
+  undoStack.push({ board:board.slice(), turn, goatsToPlace, goatsCaptured, pos:[...positionSet], lastMove });
+  if (m.type==='place'){ board[m.to]=GOAT; goatsToPlace--; sfx('place'); }
+  else if (m.type==='move'){ board[m.to]=board[m.from]; board[m.from]=EMPTY; sfx('move'); }
+  else { board[m.from]=EMPTY; board[m.over]=EMPTY; board[m.to]=TIGER; goatsCaptured++; sfx('capture'); }
+  lastMove = m;
+  turn = t2(turn);
+  selected = -1;
+  if (goatsToPlace===0) positionSet.add(stateKey());
+  postChecks();
+}
+
+function postChecks(){
+  if (goatsCaptured>=5){ render(); endGame(TIGER); return; }
+  if (rawMoves(turn).length===0){ render(); endGame(turn===TIGER ? GOAT : TIGER); return; }
+  render();
+  if (isAITurn()) scheduleAI();
+}
+
+function scheduleAI(){
+  aiThinking = true; render();
+  aiTimer = setTimeout(()=>{
+    const m = aiPick();
+    aiThinking = false;
+    if (m) commitMove(m); else { render(); }
+  }, 380);
+}
+
+function endGame(who){
+  gameOver = true; winner = who;
+  selected = -1; render();
+  stopGameMusic();
+  sfx(who===humanSide || mode==='two' ? 'win' : 'lose');
+  $('end-icon').innerHTML = '<use href="#ico-'+(who===TIGER?'tiger':'goat')+'"/>';
+  if (who===TIGER){
+    $('end-title').textContent = 'Ganan los tigres';
+    $('end-sub').textContent = 'capturaron 5 cabras';
+  } else {
+    $('end-title').textContent = 'Ganan las cabras';
+    $('end-sub').textContent = 'los tigres están atrapados';
+  }
+  setTimeout(()=> $('end-overlay').classList.add('visible'), 650);
+}
+
+/* =====================================================================
+   INTERACCIÓN
+   ===================================================================== */
+function handleClick(idx){
+  if (gameOver || aiThinking || !isHumanTurn()) return;
+  const mv = legalMoves();
+
+  // Fase de colocación de cabras
+  if (turn===GOAT && goatsToPlace>0){
+    if (board[idx]===EMPTY && mv.some(m=>m.type==='place'&&m.to===idx)){ commitMove({type:'place', to:idx}); }
+    return;
+  }
+  // Movimiento / tigres
+  if (selected===-1){
+    if (board[idx]===turn && mv.some(m=>m.from===idx)){ selected=idx; sfx('select'); render(); }
+    return;
+  }
+  if (idx===selected){ selected=-1; render(); return; }
+  if (board[idx]===turn && mv.some(m=>m.from===idx)){ selected=idx; sfx('select'); render(); return; }
+  const m = mv.find(x=> x.from===selected && x.to===idx);
+  if (m) commitMove(m);
+}
+
+function doUndo(){
+  if (aiThinking || !undoStack.length) return;
+  // En modo IA, deshacer hasta que vuelva a ser turno del humano
+  let snap = undoStack.pop();
+  if (mode==='ai'){
+    while (undoStack.length && snap.turn!==humanSide) snap = undoStack.pop();
+  }
+  board = snap.board; turn = snap.turn; goatsToPlace = snap.goatsToPlace;
+  goatsCaptured = snap.goatsCaptured; positionSet = new Set(snap.pos); lastMove = snap.lastMove;
+  selected = -1; gameOver = false; winner = null;
+  $('end-overlay').classList.remove('visible');
+  render();
+}
+
+/* =====================================================================
+   RENDER (SVG)
+   ===================================================================== */
+const M = 12, STEP = (100 - 2*M) / 4;
+const px = i => M + (i%N)*STEP;
+const py = i => M + Math.floor(i/N)*STEP;
+const SZ = 15;            // tamaño de ficha en unidades de viewBox
+
+function buildBoardStatic(){
+  const svg = $('board');
+  let s = '';
+  // aristas (cada arista una vez)
+  for (let i=0;i<25;i++) for (const j of adj[i]) if (j>i)
+    s += `<line class="edge" x1="${px(i)}" y1="${py(i)}" x2="${px(j)}" y2="${py(j)}"/>`;
+  // puntos
+  for (let i=0;i<25;i++) s += `<circle class="node-dot" cx="${px(i)}" cy="${py(i)}" r="1.4"/>`;
+  svg.innerHTML = `<g id="edges">${s}</g><g id="hl"></g><g id="pieces"></g><g id="hits"></g>`;
+  // zonas táctiles
+  const hits = $('hits');
+  let h = '';
+  for (let i=0;i<25;i++) h += `<circle class="hit" data-idx="${i}" cx="${px(i)}" cy="${py(i)}" r="8"/>`;
+  hits.innerHTML = h;
+  hits.querySelectorAll('.hit').forEach(el=>{
+    el.addEventListener('click', ()=> handleClick(+el.dataset.idx));
+  });
+}
+
+function render(){
+  if (!$('board').querySelector('#pieces')) buildBoardStatic();
+
+  // marcadores superiores
+  $('goat-count').textContent = goatsToPlace>0 ? goatsToPlace : board.filter(x=>x===GOAT).length;
+  $('goat-label').textContent = goatsToPlace>0 ? 'por colocar' : 'en juego';
+  $('cap-count').textContent = goatsCaptured + '/5';
+  $('chip-goat').classList.toggle('active', turn===GOAT && !gameOver);
+  $('chip-tiger').classList.toggle('active', turn===TIGER && !gameOver);
+
+  // línea de turno
+  const tl = $('turn-line');
+  if (gameOver){ tl.innerHTML = ''; }
+  else if (aiThinking){ tl.innerHTML = `<span class="thinking">pensando<span class="dots"></span></span>`; }
+  else {
+    const who = turn===GOAT ? 'cabras' : 'tigres';
+    let txt;
+    if (turn===GOAT && goatsToPlace>0) txt = `Coloca una <b>cabra</b>`;
+    else txt = `Turno de <b>${who}</b>`;
+    if (mode==='ai') txt += turn===humanSide ? ' · tú' : ' · IA';
+    tl.innerHTML = txt;
+  }
+
+  // capa de resaltados
+  let hl = '';
+  if (lastMove){
+    if (lastMove.to!=null) hl += `<circle class="last-ring" cx="${px(lastMove.to)}" cy="${py(lastMove.to)}" r="7"/>`;
+  }
+  if (selected!==-1) hl += `<circle class="sel-ring" cx="${px(selected)}" cy="${py(selected)}" r="8"/>`;
+
+  // puntos de movimiento válidos
+  if (!gameOver && !aiThinking && isHumanTurn()){
+    const mv = legalMoves();
+    if (turn===GOAT && goatsToPlace>0){
+      mv.forEach(m=> hl += `<circle class="mv-dot" cx="${px(m.to)}" cy="${py(m.to)}" r="2.2"/>`);
+    } else if (selected!==-1){
+      mv.filter(m=>m.from===selected).forEach(m=>{
+        if (m.type==='capture'){
+          hl += `<rect class="mv-cap" x="${px(m.to)-4.5}" y="${py(m.to)-4.5}" width="9" height="9" rx="1.5"/>`;
+          hl += `<circle class="mv-dot" cx="${px(m.to)}" cy="${py(m.to)}" r="2"/>`;
+        } else {
+          hl += `<circle class="mv-dot" cx="${px(m.to)}" cy="${py(m.to)}" r="2.2"/>`;
+        }
+      });
+    }
+  }
+  $('hl').innerHTML = hl;
+
+  // piezas
+  let pc = '';
+  const appearAt = (lastMove && (lastMove.type==='place' || lastMove.type==='move' || lastMove.type==='capture')) ? lastMove.to : -2;
+  for (let i=0;i<25;i++) if (board[i]){
+    const sym = board[i]===TIGER ? '#ico-tiger' : '#ico-goat';
+    const cls = i===appearAt ? 'piece appear' : 'piece';
+    pc += `<use class="${cls}" href="${sym}" x="${px(i)-SZ/2}" y="${py(i)-SZ/2}" width="${SZ}" height="${SZ}"/>`;
+  }
+  $('pieces').innerHTML = pc;
+}
+
+/* =====================================================================
+   NAVEGACIÓN DE PANTALLAS
+   ===================================================================== */
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=> s.classList.remove('visible'));
+  $(id).classList.add('visible');
+}
+function toMenu(){
+  if (aiTimer) clearTimeout(aiTimer); aiThinking=false; gameOver=false;
+  document.body.classList.remove('in-game');
+  $('end-overlay').classList.remove('visible');
+  stopGameMusic(); startMenuMusic();
+  show('screen-home');
+}
+function startSelectedGame(){
+  document.body.classList.add('in-game');
+  $('end-overlay').classList.remove('visible');
+  show('screen-game');
+  stopMenuMusic();
+  newGame();
+}
+
+$('btn-1p').addEventListener('click', ()=>{ ensureAudio(); show('screen-setup'); });
+$('btn-2p').addEventListener('click', ()=>{ ensureAudio(); mode='two'; startSelectedGame(); });
+$('btn-setup-back').addEventListener('click', ()=> show('screen-home'));
+
+$('side-cards').addEventListener('click', e=>{
+  const card = e.target.closest('.card'); if (!card) return;
+  $('side-cards').querySelectorAll('.card').forEach(c=>c.classList.remove('selected'));
+  card.classList.add('selected');
+});
+$('diff-cards').addEventListener('click', e=>{
+  const card = e.target.closest('.card'); if (!card) return;
+  $('diff-cards').querySelectorAll('.card').forEach(c=>c.classList.remove('selected'));
+  card.classList.add('selected');
+});
+$('btn-play').addEventListener('click', ()=>{
+  ensureAudio();
+  mode = 'ai';
+  humanSide = $('side-cards').querySelector('.selected').dataset.side;
+  difficulty = $('diff-cards').querySelector('.selected').dataset.diff;
+  startSelectedGame();
+});
+
+$('btn-restart').addEventListener('click', ()=>{ $('end-overlay').classList.remove('visible'); newGame(); });
+$('btn-undo').addEventListener('click', doUndo);
+$('btn-menu').addEventListener('click', toMenu);
+$('btn-rematch').addEventListener('click', ()=>{ $('end-overlay').classList.remove('visible'); newGame(); });
+$('btn-end-menu').addEventListener('click', toMenu);
+
+/* =====================================================================
+   TEMA / SONIDO / TUTORIAL
+   ===================================================================== */
+function applyTheme(light){
+  document.body.classList.toggle('light', light);
+  document.documentElement.classList.remove('pre-light');
+  $('theme-toggle');
+  document.querySelector('meta[name=theme-color]').setAttribute('content', light ? '#f3f2ee' : '#0b0b0c');
+  try { localStorage.setItem('baghchal_theme', light ? 'light' : 'dark'); } catch(e){}
+}
+(function initTheme(){
+  let light = false;
+  try { light = localStorage.getItem('baghchal_theme')==='light'; } catch(e){}
+  if (light) document.body.classList.add('light');
+})();
+$('theme-toggle').addEventListener('click', ()=> applyTheme(!document.body.classList.contains('light')));
+
+$('help-btn').addEventListener('click', ()=> $('tutorial-overlay').classList.add('visible'));
+$('tut-close').addEventListener('click', ()=> $('tutorial-overlay').classList.remove('visible'));
+
+/* ---------- Audio ---------- */
+let muted = false;
+try { muted = localStorage.getItem('baghchal_muted')==='1'; } catch(e){}
+let actx=null, mGain=null;
+function ensureAudio(){
+  if (!actx){
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC){ actx = new AC(); mGain = actx.createGain(); mGain.gain.value = muted?0:0.5; mGain.connect(actx.destination); }
+  }
+  if (actx && actx.state==='suspended') actx.resume();
+}
+function tone(freq, dur, type='sine', vol=0.5, when=0){
+  if (!actx || muted) return;
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = type; o.frequency.value = freq; g.gain.value = 0;
+  o.connect(g); g.connect(mGain);
+  const t = actx.currentTime + when;
+  g.gain.linearRampToValueAtTime(vol, t+0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+  o.start(t); o.stop(t+dur+0.03);
+}
+function sfx(kind){
+  ensureAudio(); if (!actx || muted) return;
+  if (kind==='select') tone(640, 0.06, 'sine', 0.18);
+  else if (kind==='move') tone(440, 0.08, 'triangle', 0.22);
+  else if (kind==='place') { tone(300, 0.10, 'triangle', 0.35); tone(150, 0.12, 'sine', 0.2, 0.0); }
+  else if (kind==='capture'){ tone(260,0.10,'sawtooth',0.4); tone(160,0.16,'sawtooth',0.4,0.07); tone(90,0.2,'sine',0.3,0.12); }
+  else if (kind==='win'){ [523,659,784,1047].forEach((f,i)=> tone(f,0.22,'triangle',0.32,i*0.10)); }
+  else if (kind==='lose'){ [392,330,262].forEach((f,i)=> tone(f,0.3,'sine',0.3,i*0.12)); }
+}
+
+// Música de fondo (elementos <audio>); el silencio se gestiona aquí.
+let menuEl=null, gameEls=[], curTrack=-1;
+function fade(el, target, ms){
+  if (!el) return;
+  const steps=20, st=ms/steps, start=el.volume; let i=0;
+  const iv=setInterval(()=>{ i++; el.volume=Math.max(0,Math.min(1,start+(target-start)*(i/steps)));
+    if (i>=steps){ clearInterval(iv); if (target===0){ try{el.pause();}catch(e){} } } }, st);
+}
+function startMenuMusic(){
+  if (muted) return;
+  if (!menuEl) menuEl = $('music-menu');
+  if (!menuEl || !menuEl.paused) return;
+  menuEl.volume = 0; menuEl.play().then(()=>fade(menuEl,0.5,1000)).catch(()=>{});
+}
+function stopMenuMusic(){ if (!menuEl) menuEl=$('music-menu'); if (menuEl && !menuEl.paused) fade(menuEl,0,500); }
+function startGameMusic(){
+  if (muted) return;
+  if (!gameEls.length) gameEls=[$('music-1'),$('music-2')];
+  const idx = (Math.random()<0.5)?0:1; curTrack=idx;
+  const el=gameEls[idx], other=gameEls[1-idx];
+  if (other) fade(other,0,300);
+  if (el){ el.currentTime=0; el.volume=0; el.play().then(()=>fade(el,0.45,900)).catch(()=>{}); }
+}
+function stopGameMusic(){ gameEls.forEach(el=>{ if(el) fade(el,0,500); }); curTrack=-1; }
+function setMuted(m){
+  muted=m; try{ localStorage.setItem('baghchal_muted', m?'1':'0'); }catch(e){}
+  if (mGain && actx) mGain.gain.setTargetAtTime(m?0:0.5, actx.currentTime, 0.05);
+  if (m){ [menuEl,...gameEls].forEach(el=>{ if(el){ el.volume=0; try{el.pause();}catch(e){} } }); }
+  else { if (document.body.classList.contains('in-game')) startGameMusic(); else startMenuMusic(); }
+}
+(function initSound(){
+  const btn=$('sound-toggle');
+  if (muted) btn.classList.add('muted');
+  btn.addEventListener('click', ()=>{ ensureAudio(); const nm=!btn.classList.contains('muted'); btn.classList.toggle('muted',nm); setMuted(nm); });
+})();
+
+/* =====================================================================
+   ARRANQUE
+   ===================================================================== */
+window.addEventListener('load', ()=>{
+  let hidden=false;
+  const hide=()=>{ if(hidden)return; hidden=true; $('app-splash').classList.add('hiding'); setTimeout(()=>$('app-splash').style.display='none',600); };
+  setTimeout(hide, 2000);
+
+  // arrancar música de menú al primer gesto (política de autoplay)
+  const kick=()=>{ ensureAudio(); startMenuMusic(); if (menuEl && !menuEl.paused){ ['pointerdown','touchstart','click'].forEach(e=>document.removeEventListener(e,kick)); } };
+  ensureAudio(); startMenuMusic();
+  ['pointerdown','touchstart','click'].forEach(e=>document.addEventListener(e,kick));
+});
+
+if ('serviceWorker' in navigator){
+  window.addEventListener('load', ()=> navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
