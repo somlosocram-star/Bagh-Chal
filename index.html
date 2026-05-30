@@ -12,6 +12,10 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<!-- Firebase (compat) para el modo online; se cargan de forma tolerante a fallos -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <meta name="apple-mobile-web-app-title" content="Bagh Chal">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="description" content="Bagh Chal — el juego nepalí de los tigres y las cabras. 4 tigres contra 20 cabras.">
@@ -228,6 +232,20 @@ body.light .card.small .c-roman { color: var(--text); }
 .turn-line .dots::after { content: ''; animation: dots 1.4s steps(4) infinite; }
 @keyframes dots { 0%{content:'';} 25%{content:'.';} 50%{content:'..';} 75%{content:'...';} }
 
+/* ===== Online ===== */
+.online-intro { max-width: 300px; text-align: center; color: var(--muted); font-size: .82rem; line-height: 1.5; margin-bottom: 1.8rem; }
+.room-code-label { font-family: 'IBM Plex Mono', monospace; font-size: .55rem; letter-spacing: .35em; color: var(--muted); text-transform: uppercase; margin-bottom: .8rem; }
+.room-code { font-family: 'IBM Plex Mono', monospace; font-size: 2.8rem; letter-spacing: .5em; font-weight: 600; color: var(--accent); padding: .6rem 0 .6rem .5em; border: 1px solid var(--accent); border-radius: 8px; min-width: 220px; text-align: center; box-shadow: inset 0 0 22px rgba(255,255,255,.06); margin-bottom: 1.5rem; }
+body.light .room-code { box-shadow: inset 0 0 22px rgba(0,0,0,.05); }
+.wait-status { color: var(--muted); font-size: .85rem; letter-spacing: .04em; }
+.seal.pulsing::after { animation: ringSpin 4s linear infinite; opacity: .7; }
+.code-input { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; color: var(--text); font-family: 'IBM Plex Mono', monospace; font-size: 2rem; letter-spacing: .4em; text-align: center; text-transform: uppercase; padding: .8rem .5rem .8rem .9em; width: 230px; outline: none; transition: border-color .2s; }
+.code-input:focus { border-color: var(--accent); }
+.code-input::placeholder { color: var(--muted); opacity: .4; }
+.join-error { color: #e06363; font-size: .78rem; min-height: 1.1em; margin: .9rem 0 .3rem; letter-spacing: .02em; text-align: center; }
+.online-banner { width: 100%; text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: .58rem; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); padding: .35rem 0; }
+.online-banner.warn { color: #e0a063; }
+
 .board-wrap { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; width: 100%; padding: .3rem; min-height: 0; }
 #board { width: min(94vw, 60vh); height: min(94vw, 60vh); max-width: 560px; max-height: 560px; touch-action: manipulation; }
 .edge { stroke: var(--board-line); stroke-width: 0.7; }
@@ -261,6 +279,7 @@ body.light .card.small .c-roman { color: var(--text); }
 <audio id="music-1" src="music-1.mp3" loop preload="auto"></audio>
 <audio id="music-2" src="music-2.mp3" loop preload="auto"></audio>
 <audio id="music-3" src="music-3.mp3" loop preload="auto"></audio>
+<audio id="sfx-capture" src="sfx-capture.mp3" preload="auto"></audio>
 
 <!-- Definiciones SVG de las fichas -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -282,27 +301,59 @@ body.light .card.small .c-roman { color: var(--text); }
     </symbol>
     <!-- TIGRE (blanco y negro) -->
     <symbol id="ico-tiger" viewBox="0 0 64 64">
+      <!-- orejas con mechón -->
       <g stroke="#111" stroke-width="1.4" stroke-linejoin="round">
-        <path d="M13 7 L27 16 L11 22 Z" fill="#f6f6f4"/>
-        <path d="M51 7 L37 16 L53 22 Z" fill="#f6f6f4"/>
-        <circle cx="32" cy="36" r="22" fill="#f6f6f4"/>
+        <path d="M10 10 L24 18 L13 26 Z" fill="#f6f6f4"/>
+        <path d="M54 10 L40 18 L51 26 Z" fill="#f6f6f4"/>
+        <path d="M14 14 L21 19 L16 23 Z" fill="#111"/>
+        <path d="M50 14 L43 19 L48 23 Z" fill="#111"/>
       </g>
-      <g stroke="#111" stroke-width="2.4" stroke-linecap="round" fill="none">
-        <line x1="32" y1="15" x2="32" y2="27"/>
-        <line x1="26" y1="17" x2="27.5" y2="28"/>
-        <line x1="38" y1="17" x2="36.5" y2="28"/>
-        <line x1="10" y1="33" x2="20" y2="35"/>
-        <line x1="9.5" y1="39" x2="20" y2="40"/>
-        <line x1="11" y1="46" x2="20" y2="44"/>
-        <line x1="54" y1="33" x2="44" y2="35"/>
-        <line x1="54.5" y1="39" x2="44" y2="40"/>
-        <line x1="53" y1="46" x2="44" y2="44"/>
+      <!-- cabeza ancha y angular -->
+      <path d="M32 13 C20 13 12 19 12 31 C12 38 15 41 18 43 C16 45 14 45 12 46 C16 48 20 47 22 46 C24 52 28 56 32 56 C36 56 40 52 42 46 C44 47 48 48 52 46 C50 45 48 45 46 43 C49 41 52 38 52 31 C52 19 44 13 32 13 Z" fill="#f6f6f4" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/>
+      <!-- rayas frente y mejillas -->
+      <g stroke="#111" stroke-width="2.3" stroke-linecap="round" fill="none">
+        <path d="M32 14 L32 24"/>
+        <path d="M26 15 Q27 20 28 25"/>
+        <path d="M38 15 Q37 20 36 25"/>
+        <path d="M20 18 Q22 23 24 26"/>
+        <path d="M44 18 Q42 23 40 26"/>
+        <path d="M13 30 L22 31"/>
+        <path d="M13 35 L22 35"/>
+        <path d="M14 40 L22 39"/>
+        <path d="M51 30 L42 31"/>
+        <path d="M51 35 L42 35"/>
+        <path d="M50 40 L42 39"/>
       </g>
+      <!-- cejas fruncidas -->
+      <g stroke="#111" stroke-width="1.2" fill="#f6f6f4">
+        <path d="M22 30 L31 33 L30 36 L23 34 Z"/>
+        <path d="M42 30 L33 33 L34 36 L41 34 Z"/>
+      </g>
+      <!-- ojos rasgados y fieros -->
       <g fill="#111" stroke="none">
-        <ellipse cx="25" cy="34" rx="3.1" ry="4"/><ellipse cx="39" cy="34" rx="3.1" ry="4"/>
-        <path d="M28 43 Q32 48 36 43 Q34 46 32 46 Q30 46 28 43 Z"/>
+        <path d="M23 34 Q27 31 31 35 Q27 37 23 34 Z"/>
+        <path d="M41 34 Q37 31 33 35 Q37 37 41 34 Z"/>
       </g>
-      <line x1="32" y1="46" x2="32" y2="50" stroke="#111" stroke-width="2"/>
+      <!-- hocico -->
+      <path d="M29 40 L35 40 L32 44 Z" fill="#111" stroke="#111" stroke-width="0.8" stroke-linejoin="round"/>
+      <!-- boca gruñendo -->
+      <g stroke="#111" stroke-width="1.6" fill="none" stroke-linecap="round">
+        <path d="M32 44 L32 47"/>
+        <path d="M32 47 Q27 50 23 47"/>
+        <path d="M32 47 Q37 50 41 47"/>
+      </g>
+      <!-- colmillos -->
+      <g fill="#f6f6f4" stroke="#111" stroke-width="0.8" stroke-linejoin="round">
+        <path d="M28 47 L30 47 L29 51 Z"/>
+        <path d="M34 47 L36 47 L35 51 Z"/>
+      </g>
+      <!-- bigotes -->
+      <g stroke="#111" stroke-width="0.9" stroke-linecap="round">
+        <path d="M22 42 L14 41"/>
+        <path d="M22 44 L14 45"/>
+        <path d="M42 42 L50 41"/>
+        <path d="M42 44 L50 45"/>
+      </g>
     </symbol>
     <!-- mini tablero (sello) -->
     <symbol id="ico-board" viewBox="0 0 64 64">
@@ -349,6 +400,7 @@ body.light .card.small .c-roman { color: var(--text); }
   <div class="btn-row">
     <button class="btn" id="btn-1p">Un jugador</button>
     <button class="btn" id="btn-2p">Dos jugadores</button>
+    <button class="btn" id="btn-online">Jugar online</button>
   </div>
 </div>
 
@@ -382,6 +434,62 @@ body.light .card.small .c-roman { color: var(--text); }
   <div class="btn-back-row"><button class="btn-secondary btn" id="btn-setup-back">← volver</button></div>
 </div>
 
+<!-- ONLINE: menú -->
+<div id="screen-online" class="screen">
+  <div class="seal"><svg style="color:var(--accent)"><use href="#ico-board"/></svg></div>
+  <div class="subtitle">jugar online</div>
+  <div class="online-intro">Juega en dos dispositivos. Uno crea la sala y comparte el código; el otro se une.</div>
+  <div class="btn-row">
+    <button class="btn" id="btn-create-room">Crear sala</button>
+    <button class="btn" id="btn-join-room">Unirse a sala</button>
+  </div>
+  <div class="btn-back-row"><button class="btn-secondary btn" id="btn-online-back">← volver</button></div>
+</div>
+
+<!-- ONLINE: crear sala (elegir bando) -->
+<div id="screen-create" class="screen">
+  <div class="seal"><svg style="color:var(--accent)"><use href="#ico-board"/></svg></div>
+  <div class="subtitle">crear sala</div>
+
+  <div class="section-label">elige tu bando</div>
+  <div class="cards" id="host-side-cards">
+    <button class="card selected" data-side="G">
+      <svg><use href="#ico-goat"/></svg>
+      <div class="c-name">Cabras</div>
+      <div class="c-desc">Encierra a los tigres</div>
+    </button>
+    <button class="card" data-side="T">
+      <svg><use href="#ico-tiger"/></svg>
+      <div class="c-name">Tigres</div>
+      <div class="c-desc">Captura 5 cabras</div>
+    </button>
+  </div>
+
+  <button class="btn" id="btn-do-create">Crear →</button>
+  <div class="btn-back-row"><button class="btn-secondary btn" id="btn-create-back">← volver</button></div>
+</div>
+
+<!-- ONLINE: sala de espera -->
+<div id="screen-wait" class="screen">
+  <div class="seal pulsing"><svg style="color:var(--accent)"><use href="#ico-board"/></svg></div>
+  <div class="subtitle">sala creada</div>
+  <div class="room-code-label">comparte este código</div>
+  <div class="room-code" id="room-code">····</div>
+  <div class="wait-status" id="wait-status">esperando a que se una el rival<span class="dots"></span></div>
+  <div class="btn-back-row"><button class="btn-secondary btn" id="btn-wait-cancel">cancelar</button></div>
+</div>
+
+<!-- ONLINE: unirse -->
+<div id="screen-join" class="screen">
+  <div class="seal"><svg style="color:var(--accent)"><use href="#ico-board"/></svg></div>
+  <div class="subtitle">unirse a sala</div>
+  <div class="section-label">introduce el código</div>
+  <input id="join-input" class="code-input" type="text" inputmode="latin" autocomplete="off" maxlength="4" placeholder="ABCD" />
+  <div class="join-error" id="join-error"></div>
+  <button class="btn" id="btn-do-join">Unirse →</button>
+  <div class="btn-back-row"><button class="btn-secondary btn" id="btn-join-back">← volver</button></div>
+</div>
+
 <!-- JUEGO -->
 <div id="screen-game" class="screen">
   <div class="game-head">
@@ -397,6 +505,8 @@ body.light .card.small .c-roman { color: var(--text); }
     </div>
     <div class="turn-line" id="turn-line"></div>
   </div>
+
+  <div class="online-banner" id="online-banner" style="display:none"></div>
 
   <div class="board-wrap">
     <svg id="board" viewBox="0 0 100 100" aria-label="Tablero Bagh Chal"></svg>
@@ -604,6 +714,7 @@ function commitMove(m){
   selected = -1;
   if (goatsToPlace===0) positionSet.add(stateKey());
   postChecks();
+  if (mode==='online') Online.pushState();
 }
 
 function postChecks(){
@@ -722,6 +833,7 @@ function render(){
     if (turn===GOAT && goatsToPlace>0) txt = `Coloca una <b>cabra</b>`;
     else txt = `Turno de <b>${who}</b>`;
     if (mode==='ai') txt += turn===humanSide ? ' · tú' : ' · IA';
+    else if (mode==='online') txt += turn===humanSide ? ' · tú' : ' · rival';
     tl.innerHTML = txt;
   }
 
@@ -776,6 +888,7 @@ function toMenu(){
   show('screen-home');
 }
 function startSelectedGame(){
+  setFootMode(false);
   document.body.classList.add('in-game');
   $('end-overlay').classList.remove('visible');
   show('screen-game');
@@ -805,11 +918,253 @@ $('btn-play').addEventListener('click', ()=>{
   startSelectedGame();
 });
 
-$('btn-restart').addEventListener('click', ()=>{ $('end-overlay').classList.remove('visible'); newGame(); });
-$('btn-undo').addEventListener('click', doUndo);
-$('btn-menu').addEventListener('click', toMenu);
-$('btn-rematch').addEventListener('click', ()=>{ $('end-overlay').classList.remove('visible'); newGame(); });
-$('btn-end-menu').addEventListener('click', toMenu);
+$('btn-restart').addEventListener('click', ()=>{ if(mode==='online')return; $('end-overlay').classList.remove('visible'); newGame(); });
+$('btn-undo').addEventListener('click', ()=>{ if(mode==='online')return; doUndo(); });
+$('btn-menu').addEventListener('click', ()=>{ if(mode==='online') Online.leave(); toMenu(); });
+$('btn-rematch').addEventListener('click', ()=>{ if(mode==='online'){ Online.rematch(); return; } $('end-overlay').classList.remove('visible'); newGame(); });
+$('btn-end-menu').addEventListener('click', ()=>{ if(mode==='online') Online.leave(); toMenu(); });
+
+/* =====================================================================
+   MODO ONLINE (Firebase Realtime Database)
+   ===================================================================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyAFp8M5dKmrUYxnfNdWXqHtewxEtpQJTMY",
+  authDomain: "subasta-de-tiempo.firebaseapp.com",
+  databaseURL: "https://subasta-de-tiempo-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "subasta-de-tiempo",
+  storageBucket: "subasta-de-tiempo.firebasestorage.app",
+  messagingSenderId: "265857604531",
+  appId: "1:265857604531:web:a087d5dbac48fb206f09c6",
+  measurementId: "G-MESZ6SD8ED"
+};
+
+const Online = {
+  db:null, roomRef:null, code:null, role:null, mySide:null,
+  localSeq:0, inGame:false, started:false, oppLeftShown:false,
+
+  init(){
+    if (this.db) return true;
+    if (typeof firebase === 'undefined') return false;
+    try { firebase.initializeApp(firebaseConfig); } catch(e){ /* ya inicializado */ }
+    try { this.db = firebase.database(); } catch(e){ return false; }
+    return true;
+  },
+
+  genCode(){
+    const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // sin I ni O
+    let c=''; for (let i=0;i<4;i++) c += A[(Math.random()*A.length)|0];
+    return c;
+  },
+
+  boardStr(){ return board.map(x=> x||'-').join(''); },
+  toBoard(s){ return s.split('').map(ch=> ch==='-'?EMPTY:ch); },
+  cleanMove(m){
+    if (!m) return null;
+    const o = { type:m.type, to:m.to };
+    if (m.from!=null) o.from = m.from;
+    if (m.over!=null) o.over = m.over;
+    return o;
+  },
+  snapshot(extra){
+    return Object.assign({
+      seq: this.localSeq,
+      board: this.boardStr(),
+      turn, gtp: goatsToPlace, gc: goatsCaptured,
+      lastMove: this.cleanMove(lastMove),
+      pos: [...positionSet],
+      status: 'playing'
+    }, extra||{});
+  },
+
+  oppKey(){ return this.role==='host' ? 'guestOnline' : 'hostOnline'; },
+  myKey(){ return this.role==='host' ? 'hostOnline' : 'guestOnline'; },
+
+  pushState(){
+    if (!this.roomRef || !this.inGame) return;
+    this.localSeq++;
+    this.roomRef.update(this.snapshot());
+  },
+
+  async createRoom(side){
+    if (!this.init()){ this._fail('Sin conexión'); return; }
+    this.role='host'; this.mySide=side; this.oppLeftShown=false;
+    // genera un código libre
+    let code, exists=true, tries=0;
+    try {
+      while (exists && tries<8){
+        code = this.genCode(); tries++;
+        const snap = await this.db.ref('baghchal/rooms/'+code).get();
+        exists = snap.exists();
+      }
+    } catch(e){ this._fail('No se pudo crear la sala'); return; }
+    this.code = code;
+    this.roomRef = this.db.ref('baghchal/rooms/'+code);
+    this.localSeq = 0;
+    // estado inicial de Bagh Chal
+    const initBoard = new Array(25).fill('-'); [0,4,20,24].forEach(i=> initBoard[i]='T');
+    const data = {
+      createdAt: firebase.database.ServerValue.TIMESTAMP,
+      hostSide: side, status:'waiting', seq:0,
+      board: initBoard.join(''), turn:'G', gtp:20, gc:0,
+      lastMove:null, pos:[], hostOnline:true, guestOnline:false, winner:null
+    };
+    try { await this.roomRef.set(data); } catch(e){ this._fail('No se pudo crear la sala'); return; }
+    // si el anfitrión se va antes de que entre nadie, la sala se borra
+    this.roomRef.onDisconnect().remove();
+    $('room-code').textContent = code;
+    $('wait-status').innerHTML = 'esperando a que se una el rival<span class="dots"></span>';
+    show('screen-wait');
+    this._listen();
+  },
+
+  async joinRoom(code){
+    code = (code||'').toUpperCase().trim();
+    if (code.length!==4){ this._joinErr('El código tiene 4 letras'); return; }
+    if (!this.init()){ this._joinErr('Sin conexión'); return; }
+    const ref = this.db.ref('baghchal/rooms/'+code);
+    let d;
+    try { const snap = await ref.get(); d = snap.val(); }
+    catch(e){ this._joinErr('No se pudo conectar'); return; }
+    if (!d){ this._joinErr('No existe esa sala'); return; }
+    if (d.status!=='waiting' || d.guestOnline){ this._joinErr('La sala ya está llena'); return; }
+    this.role='guest'; this.code=code; this.roomRef=ref;
+    this.mySide = t2(d.hostSide); this.oppLeftShown=false; this.localSeq = d.seq||0;
+    this._listen();
+    try { await ref.update({ status:'playing', guestOnline:true }); }
+    catch(e){ this._joinErr('No se pudo entrar'); this.roomRef=null; return; }
+  },
+
+  _listen(){
+    if (!this.roomRef) return;
+    this.roomRef.on('value', snap=>{
+      const d = snap.val();
+      if (!d){ // sala eliminada
+        if (this.inGame) this._opponentGone('La sala se cerró');
+        return;
+      }
+      if (!this.inGame){
+        if (d.status==='playing'){ this.localSeq = d.seq||0; this._enterGame(d); }
+        return;
+      }
+      // ya en juego: presencia + sincronización por turnos
+      this._banner(d);
+      if ((d.seq||0) > this.localSeq){ this.localSeq = d.seq; applyRemote(d); }
+    });
+  },
+
+  _enterGame(d){
+    this.inGame=true; this.started=true;
+    // presencia + onDisconnect
+    this.roomRef.onDisconnect().cancel();
+    this.roomRef.child(this.myKey()).set(true);
+    this.roomRef.child(this.myKey()).onDisconnect().set(false);
+    mode='online'; humanSide=this.mySide;
+    document.body.classList.add('in-game');
+    $('end-overlay').classList.remove('visible');
+    setFootMode(true);
+    show('screen-game');
+    stopMenuMusic();
+    buildBoardStatic();
+    applyRemote(d, true);
+    startGameMusic();
+    this._banner(d);
+  },
+
+  rematch(){
+    if (!this.roomRef) return;
+    this.localSeq++;
+    const initBoard = new Array(25).fill('-'); [0,4,20,24].forEach(i=> initBoard[i]='T');
+    this.roomRef.update({
+      seq:this.localSeq, board:initBoard.join(''), turn:'G', gtp:20, gc:0,
+      lastMove:null, pos:[], status:'playing', winner:null
+    });
+    // adoptamos localmente de inmediato
+    this.localSeq = this.localSeq;
+    applyRemote({ board:initBoard.join(''), turn:'G', gtp:20, gc:0, lastMove:null, pos:[] });
+  },
+
+  leave(){
+    setFootMode(false);
+    if (this.roomRef){
+      try {
+        this.roomRef.off();
+        if (this.role==='host' && !this.started){ this.roomRef.onDisconnect().cancel(); this.roomRef.remove(); }
+        else { this.roomRef.child(this.myKey()).onDisconnect().cancel(); this.roomRef.child(this.myKey()).set(false); }
+      } catch(e){}
+    }
+    this.roomRef=null; this.code=null; this.role=null; this.mySide=null;
+    this.inGame=false; this.started=false; this.localSeq=0; this.oppLeftShown=false;
+    $('online-banner').style.display='none';
+  },
+
+  _banner(d){
+    const b = $('online-banner');
+    const oppOnline = d[this.oppKey()];
+    if (oppOnline===false){ b.textContent='rival desconectado'; b.className='online-banner warn'; b.style.display='block'; }
+    else { b.style.display='none'; }
+  },
+
+  _opponentGone(msg){
+    const b = $('online-banner'); b.textContent=msg||'rival desconectado'; b.className='online-banner warn'; b.style.display='block';
+  },
+
+  _fail(msg){ alert(msg + '. Comprueba tu conexión a internet.'); show('screen-online'); },
+  _joinErr(msg){ $('join-error').textContent = msg; }
+};
+
+// aplica un estado recibido por la red y detecta fin de partida
+function applyRemote(d, initial){
+  if (aiTimer) clearTimeout(aiTimer); aiThinking=false;
+  board = Online.toBoard(d.board);
+  turn = d.turn; goatsToPlace = d.gtp; goatsCaptured = d.gc;
+  lastMove = d.lastMove || null;
+  positionSet = new Set(d.pos || []);
+  selected = -1; undoStack = []; gameOver=false; winner=null;
+  $('end-overlay').classList.remove('visible');
+  render();
+  if (!initial && lastMove) sfx(lastMove.type);   // eco sonoro del movimiento del rival
+  if (goatsCaptured>=5){ endGame(TIGER); return; }
+  if (rawMoves(turn).length===0){ endGame(turn===TIGER ? GOAT : TIGER); return; }
+}
+
+// muestra/oculta botones de pie según el modo
+function setFootMode(online){
+  $('btn-restart').style.display = online ? 'none' : '';
+  $('btn-undo').style.display = online ? 'none' : '';
+}
+
+/* ----- Cableado de botones del modo online ----- */
+$('btn-online').addEventListener('click', ()=>{
+  ensureAudio();
+  if (typeof firebase === 'undefined' || !Online.init()){
+    alert('El modo online necesita conexión a internet la primera vez.');
+    return;
+  }
+  show('screen-online');
+});
+$('btn-online-back').addEventListener('click', ()=> show('screen-home'));
+$('btn-create-room').addEventListener('click', ()=> show('screen-create'));
+$('btn-create-back').addEventListener('click', ()=> show('screen-online'));
+$('btn-join-room').addEventListener('click', ()=>{ $('join-input').value=''; $('join-error').textContent=''; show('screen-join'); });
+$('btn-join-back').addEventListener('click', ()=> show('screen-online'));
+
+$('host-side-cards').addEventListener('click', e=>{
+  const card = e.target.closest('.card'); if (!card) return;
+  $('host-side-cards').querySelectorAll('.card').forEach(c=>c.classList.remove('selected'));
+  card.classList.add('selected');
+});
+$('btn-do-create').addEventListener('click', ()=>{
+  const side = $('host-side-cards').querySelector('.selected').dataset.side;
+  $('btn-do-create').disabled = true;
+  Online.createRoom(side).finally(()=>{ $('btn-do-create').disabled = false; });
+});
+$('btn-wait-cancel').addEventListener('click', ()=>{ Online.leave(); show('screen-online'); });
+
+$('join-input').addEventListener('input', e=>{ e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g,''); $('join-error').textContent=''; });
+$('btn-do-join').addEventListener('click', ()=>{
+  $('btn-do-join').disabled = true;
+  Promise.resolve(Online.joinRoom($('join-input').value)).finally(()=>{ $('btn-do-join').disabled = false; });
+});
 
 /* =====================================================================
    TEMA / SONIDO / TUTORIAL
@@ -853,11 +1208,16 @@ function tone(freq, dur, type='sine', vol=0.5, when=0){
   o.start(t); o.stop(t+dur+0.03);
 }
 function sfx(kind){
+  if (kind==='capture'){
+    if (muted) return;
+    const el = $('sfx-capture');
+    if (el){ try { el.currentTime = 0; el.volume = 0.9; el.play().catch(()=>{}); } catch(e){} }
+    return;
+  }
   ensureAudio(); if (!actx || muted) return;
   if (kind==='select') tone(640, 0.06, 'sine', 0.18);
   else if (kind==='move') tone(440, 0.08, 'triangle', 0.22);
   else if (kind==='place') { tone(300, 0.10, 'triangle', 0.35); tone(150, 0.12, 'sine', 0.2, 0.0); }
-  else if (kind==='capture'){ tone(260,0.10,'sawtooth',0.4); tone(160,0.16,'sawtooth',0.4,0.07); tone(90,0.2,'sine',0.3,0.12); }
   else if (kind==='win'){ [523,659,784,1047].forEach((f,i)=> tone(f,0.22,'triangle',0.32,i*0.10)); }
   else if (kind==='lose'){ [392,330,262].forEach((f,i)=> tone(f,0.3,'sine',0.3,i*0.12)); }
 }

@@ -1,5 +1,5 @@
-/* Bagh Chal — service worker (cache-first, sin backend) */
-const CACHE = 'baghchal-v3';
+/* Bagh Chal — service worker */
+const CACHE = 'baghchal-v5';
 const ASSETS = [
   './',
   './index.html',
@@ -13,7 +13,8 @@ const ASSETS = [
   './music-menu.mp3',
   './music-1.mp3',
   './music-2.mp3',
-  './music-3.mp3'
+  './music-3.mp3',
+  './sfx-capture.mp3'
 ];
 
 self.addEventListener('install', (e) => {
@@ -37,6 +38,16 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
+
+  // Firebase / Google: siempre red, sin interceptar (estado en vivo y SDK)
+  if (url.hostname.includes('firebase') ||
+      url.hostname.includes('firebaseio') ||
+      url.hostname.includes('firebasedatabase.app') ||
+      url.hostname.includes('googleapis.com') ||
+      url.hostname.includes('gstatic.com')) {
+    return;
+  }
+
   const isHTML = req.mode === 'navigate' ||
                  req.destination === 'document' ||
                  url.pathname.endsWith('.html') ||

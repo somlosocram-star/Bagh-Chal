@@ -1,0 +1,66 @@
+================================================================
+  BAGH CHAL — Reglas de seguridad de Firebase Realtime Database
+================================================================
+
+IMPORTANTE: NO borres ni reemplaces todas tus reglas actuales.
+Tu proyecto "subasta-de-tiempo" ya tiene reglas para Subasta.
+Solo tienes que AÑADIR el bloque "baghchal" dentro de "rules",
+junto a lo que ya tengas. Si lo reemplazas todo, romperás Subasta.
+
+----------------------------------------------------------------
+DÓNDE PEGARLO
+----------------------------------------------------------------
+Consola de Firebase → Realtime Database → pestaña "Reglas".
+
+----------------------------------------------------------------
+QUÉ AÑADIR
+----------------------------------------------------------------
+Dentro de tu objeto "rules" existente, añade la clave "baghchal".
+Por ejemplo, si ahora tienes algo así:
+
+{
+  "rules": {
+    "subastas": { ... lo que ya tengas ... }
+  }
+}
+
+Déjalo así (fíjate en la coma tras el bloque anterior):
+
+{
+  "rules": {
+    "subastas": { ... lo que ya tengas ... },
+
+    "baghchal": {
+      "rooms": {
+        "$code": {
+          ".read": true,
+          ".write": true,
+          ".validate": "$code.length == 4"
+        }
+      }
+    }
+  }
+}
+
+----------------------------------------------------------------
+NOTA SOBRE SEGURIDAD (honestidad)
+----------------------------------------------------------------
+Estas reglas permiten leer/escribir las salas sin autenticación.
+Para un juego entre amigos es lo habitual y lo más simple. El
+riesgo real es bajo: lo peor que alguien podría hacer es adivinar
+un código de 4 letras y molestar en una partida. No hay datos
+personales en juego.
+
+Si en el futuro quieres blindarlo más, las opciones serían:
+ - Activar Firebase Anonymous Auth y exigir "auth != null".
+ - Añadir caducidad de salas viejas con una Cloud Function.
+Pero para empezar, lo de arriba es suficiente.
+
+----------------------------------------------------------------
+LIMPIEZA DE SALAS ABANDONADAS (opcional)
+----------------------------------------------------------------
+El juego ya borra la sala si el anfitrión se va antes de que
+entre nadie. Una partida en curso se conserva por si alguien
+pierde la conexión y vuelve. Si con el tiempo se acumulan salas
+zombi, puedes borrarlas a mano desde la consola (nodo
+baghchal/rooms) o programar una limpieza por fecha (createdAt).
